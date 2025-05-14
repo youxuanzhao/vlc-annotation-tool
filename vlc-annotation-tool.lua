@@ -9,7 +9,7 @@ local reopen_main_dialog = false -- Flag to reopen the main dialog after the war
 function descriptor()
 	return {
 		title = "VLC Annotation Tool",
-		version = "1.0",
+		version = "1.1",
 		author = "Youxuan Zhao",
 		capabilities = { "input-listener" },
 	}
@@ -79,8 +79,7 @@ function create_annotation_popup()
 
 	-- Cancel Button
 	main_dialog:add_button("Cancel", function()
-		main_dialog:delete()
-		main_dialog = nil
+		deactivate()
 	end, 4, 4, 1)
 end
 
@@ -172,8 +171,10 @@ function write_annotations_to_file(txt_file_path, annotations)
 	-- Write sorted annotations back to the file
 	local file = io.open(txt_file_path, "w")
 	if file then
-		for _, line in ipairs(annotations) do
-			file:write(line .. "\n")
+		for _, annotation in ipairs(annotations) do
+			-- Ensure timestamp, description, and shot type are separated by tabs
+			local timestamp, description, shot_type = annotation:match("^(%d%d:%d%d:%d%d)\t(.-)\t(.-)$")
+			file:write(string.format("%s\t%s\t%s\n", timestamp, description or "", shot_type or ""))
 		end
 		file:close()
 		vlc.msg.info("Annotation saved and file sorted: " .. txt_file_path)
