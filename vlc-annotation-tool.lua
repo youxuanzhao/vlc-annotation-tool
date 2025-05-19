@@ -49,10 +49,6 @@ function create_annotation_popup()
 	main_dialog:add_label("Description:", 1, 2, 1)
 	local description_input = main_dialog:add_text_input("", 2, 2, 3)
 
-	-- Input for Shot Type
-	main_dialog:add_label("Type of Shot:", 1, 3, 1)
-	local type_input = main_dialog:add_text_input("", 2, 3, 3)
-
 	-- Refresh Button
 	main_dialog:add_button("Refresh Timestamp", function()
 		refresh_timestamp()
@@ -61,7 +57,6 @@ function create_annotation_popup()
 	-- Save Button
 	main_dialog:add_button("Save", function()
 		local description = description_input:get_text()
-		local shot_type = type_input:get_text()
 
 		-- Do not save if description is empty
 		if description == "" or description == nil then
@@ -69,12 +64,8 @@ function create_annotation_popup()
 			return
 		end
 
-		-- Set shot type to "N/A" if it's empty
-		if shot_type == "" or shot_type == nil then
-			shot_type = "N/A"
-		end
 
-		save_annotation(timestamp_label:get_text(), description, shot_type)
+		save_annotation(timestamp_label:get_text(), description)
 	end, 3, 4, 1)
 
 	-- Cancel Button
@@ -107,7 +98,7 @@ function get_current_timestamp()
 end
 
 -- Saves the annotation to a .txt file and handles overwriting of existing annotations
-function save_annotation(timestamp, description, shot_type)
+function save_annotation(timestamp, description)
 	local input = vlc.object.input()
 	if not input then
 		return
@@ -145,17 +136,16 @@ function save_annotation(timestamp, description, shot_type)
 		-- Show the warning popup
 		create_warning_popup(
 			existing_line,
-			string.format("%s\t%s\t%s", timestamp, description, shot_type),
+			string.format("%s\t%s", timestamp, description),
 			txt_file_path,
 			annotations,
-			description,
-			shot_type
+			description
 		)
 		return
 	end
 
 	-- Add the new annotation (no overwrite needed)
-	table.insert(annotations, string.format("%s\t%s\t%s", timestamp, description, shot_type))
+	table.insert(annotations, string.format("%s\t%s", timestamp, description))
 	write_annotations_to_file(txt_file_path, annotations)
 end
 
@@ -173,8 +163,8 @@ function write_annotations_to_file(txt_file_path, annotations)
 	if file then
 		for _, annotation in ipairs(annotations) do
 			-- Ensure timestamp, description, and shot type are separated by tabs
-			local timestamp, description, shot_type = annotation:match("^(%d%d:%d%d:%d%d)\t(.-)\t(.-)$")
-			file:write(string.format("%s\t%s\t%s\n", timestamp, description or "", shot_type or ""))
+			local timestamp, description = annotation:match("^(%d%d:%d%d:%d%d)\t(.-)$")
+			file:write(string.format("%s\t%s\n", timestamp, description or ""))
 		end
 		file:close()
 		vlc.msg.info("Annotation saved and file sorted: " .. txt_file_path)
@@ -184,7 +174,7 @@ function write_annotations_to_file(txt_file_path, annotations)
 end
 
 -- Creates a warning popup for overwriting annotations
-function create_warning_popup(existing_annotation, new_annotation, txt_file_path, annotations, description, shot_type)
+function create_warning_popup(existing_annotation, new_annotation, txt_file_path, annotations, description)
 	local warning_dialog = vlc.dialog("Warning: Overwriting Annotation")
 	warning_dialog:add_label("An annotation with the same timestamp already exists:", 1, 1, 2)
 	warning_dialog:add_label(existing_annotation, 1, 2, 2)
@@ -220,7 +210,7 @@ function create_warning_popup(existing_annotation, new_annotation, txt_file_path
 	warning_dialog:add_button("Refresh and Proceed", function()
 		-- Refresh the timestamp
 		local refreshed_timestamp = get_current_timestamp()
-		local refreshed_annotation = string.format("%s\t%s\t%s", refreshed_timestamp, description, shot_type)
+		local refreshed_annotation = string.format("%s\t%s", refreshed_timestamp, description)
 
 		-- Overwrite the existing annotation with the refreshed timestamp
 		table.insert(annotations, refreshed_annotation)
